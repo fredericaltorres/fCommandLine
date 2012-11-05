@@ -1,8 +1,15 @@
-                                  /*
-    Synchronous file system manipulation for the spirit of the MS-DOS batch languages,
-    .NET System.IO and JavaScript
+/*
+    fCommandLine.js
+    An attempt to write a JavaScript file manipulation api for Windows and MacOS. Based on NodeJs and the extension (fs and path).
 */
 
+
+/*
+    Dependencies
+    npm install fs
+    npm install path
+    npm install nodeunit
+*/
 print = function(s){
     console.log(s);
 }
@@ -11,6 +18,8 @@ print = function(s){
 http://nodejs.org/api/path.html
 */
 var ffs = (function(){
+  
+   "use strict";
   
     var _fs             = require('fs');
     var _path           = require('path');
@@ -121,14 +130,25 @@ var ffs = (function(){
 
         return _path.basename(fname);
      }
-     _ffs.Path.combine = function() {
+
+     _ffs.combine = function() {
 
         return _path.join.apply(_path, arguments);
      }
+     _ffs.Path.combine = _ffs.combine;
 
     //  --- File Sub Object --
-    _ffs.File.WriteAllText = function(fname, text) {
+    _ffs.File.writeAllText = function(fname, text, encoding) {
 
+        _fs.writeFileSync(fname, text, encoding);
+    }
+    _ffs.File.readAllText = function(fname, encoding) {
+
+        return _fs.readFileSync(fname, encoding)
+    }
+    _ffs.File.appendAllText = function(fname, text, encoding) {
+
+        _fs.appendFile(fname, text, encoding);
     }
 
     //  --- Directory Sub Object --
@@ -161,9 +181,4 @@ var ffs = (function(){
 
 })();
 
-
-print(ffs.dir("c:\\dump","*.dll"));
-print(ffs.dir("c:\\dump","*.*"));
-
-
-
+module.exports.ffs = ffs;
