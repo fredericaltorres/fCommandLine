@@ -8,11 +8,9 @@
     Dependencies
     npm install fs
     npm install path
-    npm install nodeunit
+    npm install nodeunit -g
 */
-print = function(s){
-    console.log(s);
-}
+print = function(s){ console.log(s); }
 
 /*
 http://nodejs.org/api/path.html
@@ -50,6 +48,13 @@ var ffs = (function(){
     }
     _ffs.File.delete   = _ffs.rmdir;
 
+    _ffs.exists = function(path, mode) {
+
+        return _fs.existsSync(path);
+    }
+    _ffs.File.exists        = _ffs.exists;
+    _ffs.Directory.exists   = _ffs.exists;
+
     // Make Directory
     _ffs.mkdir = function(path, mode) {
 
@@ -63,7 +68,7 @@ var ffs = (function(){
 
         return _fs.rmdirSync(path);
     }
-    _ffs.Directory.Delete   = _ffs.rmdir;
+    _ffs.Directory.delete   = _ffs.rmdir;
     _ffs.rd                 = _ffs.rmdir;
 
     // http://code.google.com/p/jserver/source/browse/fileutil.js?spec=svn15340b33ca01183e34574e80e7c6946f4e5ac197&r=15340b33ca01183e34574e80e7c6946f4e5ac197
@@ -130,7 +135,6 @@ var ffs = (function(){
 
         return _path.basename(fname);
      }
-
      _ffs.combine = function() {
 
         return _path.join.apply(_path, arguments);
@@ -148,7 +152,7 @@ var ffs = (function(){
     }
     _ffs.File.appendAllText = function(fname, text, encoding) {
 
-        _fs.appendFile(fname, text, encoding);
+        _fs.appendFileSync(fname, text, encoding);
     }
 
     //  --- Directory Sub Object --
