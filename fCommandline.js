@@ -12,15 +12,20 @@
 */
 print = function(s){ console.log(s); }
 
+// Mimic MS-DOS switch, that can be passed as arguments
+var $b = "/b";
+var $s = "/s";
+var $y = "/y";
+
 /*
 http://nodejs.org/api/path.html
 */
 var ffs = (function(){
-  
+
    "use strict";
-  
-    var _fs             = require('fs');
-    var _path           = require('path');
+
+    var _fs             = require('fs-extra');
+    var _path           = require('path-extra');
 
     var repl = {
       '.': '\\.',
@@ -39,14 +44,22 @@ var ffs = (function(){
 
         return process.cwd();
     }
-    _ffs.Directory.GetCurrentDirectory = _ffs.pwd;
-    
-    // Delete file
-    _ffs.delete = function(fname) {
+    _ffs.Directory.getCurrentDirectory = _ffs.pwd;
 
-        return _fs.unlinkSync(fname)
+    // Delete file
+    _ffs.delete = function(fileNameOrArrayOfFileName) {
+
+        if(Array.isArray(fileNameOrArrayOfFileName)) {
+
+            for(var i=0; i<fileNameOrArrayOfFileName.length; i++)
+                this.delete(fileNameOrArrayOfFileName[i]);
+        }
+        else {
+            print("delete "+fileNameOrArrayOfFileName);
+            _fs.unlinkSync(fileNameOrArrayOfFileName);
+        }
     }
-    _ffs.File.delete   = _ffs.rmdir;
+    _ffs.File.delete = _ffs.rmdir;
 
     _ffs.exists = function(path, mode) {
 
@@ -75,18 +88,51 @@ var ffs = (function(){
     _ffs.__dirSync = function( dir, recurse, out ) {
 
         if (typeof out === 'undefined') out = [];
-        var files = _fs.readdirSync( dir, true );
+        var files = _fs.readdirSync(dir);
         for ( var i = 0 ; i < files.length ; ++i ) {
-                var fname = dir+'/'+files[i];
-                out.push( fname );
+                var fname = dir + '/' + files[i];
+                out.push(fname);
                 if (recurse) {
-                        var fstat = _fs.statSync( fname );
-                        if (fstat.isDirectory())
-                                this.__dirSync( fname, recurse, out );
+                    var fstat = _fs.statSync(fname);
+                    if (fstat.isDirectory())
+                        this.__dirSync(fname, recurse, out);
                 }
         }
         return out;
     }
+    _ffs.__copyOneFile = function(source, destination) {
+
+        var BUF_LENGTH  = 64*1024;
+        var buff        = new Buffer(BUF_LENGTH);
+        var fdr         = _fs.openSync(source, 'r');
+        var fdw         = _fs.openSync(destination, 'w');
+        var bytesRead   = 1;
+        var pos         = 0;
+        while(bytesRead > 0) {
+            bytesRead = _fs.readSync(fdr, buff, 0, BUF_LENGTH, pos);
+            _fs.writeSync(fdw,buff,0,bytesRead);
+            pos += bytesRead;
+        }
+        _fs.closeSync(fdr)
+        _fs.closeSync(fdw)
+    }
+    _ffs.copy = function(source, destination) {
+
+        var wildCard    = this.Path.getFileName(source);
+        var sourcePath  = this.Path.getDirectoryName(source);
+        var destFile    = null;
+        var files       = this.Directory.getFiles(sourcePath, wildCard);
+        var l           = [];
+
+        for(var i=0; i<files.length; i++) {
+
+            destFile = this.combine(destination, _ffs.Path.getFileName(files[i]));
+            this.__copyOneFile(files[i], destFile);
+            l.push(destFile);
+        }
+        return l;
+    }
+    _ffs.File.copy = _ffs.copy;
 
     // Dir or GetFile
     _ffs.dir = function(path, wildCard, recurse) {
@@ -95,16 +141,15 @@ var ffs = (function(){
         var base = wildCard;
         for (var k in repl)
         {
-            var v = repl[k];
-            base  = base.replace(k,v);
+            base = base.replace(k, repl[k]); // TODO may be an issue with the replace only replacing once
         }
-        base = new RegExp( '^'+base+"$" );
-        var files0 = this.__dirSync( path, recurse );
+        base = new RegExp('^'+base+"$");
+        var files0 = this.__dirSync(path, recurse);
         var files  = [];
-        for ( var i = 0 ; i < files0.length ; ++i ) {
+        for(var i=0; i<files0.length; ++i) {
                 var fname = files0[i];
-                if ( base.test( _path.basename(fname) ) )
-                        files.push( fname );
+                if(base.test(_path.basename(fname)))
+                    files.push( fname );
         }
         return files;
     };
@@ -113,7 +158,7 @@ var ffs = (function(){
 
         return _fs.statSync(fname).isDirectory();
     }
-    
+
      //  --- Path Sub Object --
 
      _ffs.Path.getExtension = function(fname) {
@@ -163,7 +208,7 @@ var ffs = (function(){
         var all = _ffs.dir(path, wildCard, recurse);
         var l   = [];
         all.forEach(function(f) {
-            var ff = _path.join(path, f);
+            var ff = f;//_path.join(path, f);
             if((directory) && (_ffs.isDirectory(ff))) {
                 l.push(ff);
             }
@@ -185,4 +230,7 @@ var ffs = (function(){
 
 })();
 
-module.exports.ffs = ffs;
+module.exports.ffs  = ffs;
+module.exports.$b   = $b;
+module.exports.$s   = $s;
+

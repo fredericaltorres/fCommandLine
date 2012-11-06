@@ -23,6 +23,21 @@ function normalizeTestObject(test) {
 
     normalizeTestObject.counter++;
 
+    test.createTextFile = function(fileNameOrArrayOfFileName, refText) {
+
+        refText = refText || "This is the text";
+
+        if(Array.isArray(fileNameOrArrayOfFileName)) {
+
+            for(var i=0; i<fileNameOrArrayOfFileName.length; i++)
+                this.createTextFile(fileNameOrArrayOfFileName[i], refText);
+        }
+        else {
+
+            ff$.File.writeAllText(fileNameOrArrayOfFileName, refText);
+        }
+    }
+
     test.getNewTestFolder = function() {
 
         var marker = "nodeunit_";
@@ -133,3 +148,38 @@ exports.test_File_CreateAppendRead = function(t) {
     ff$.rmdir(testFolder);
     t.done();
 }
+
+exports.test_File_Copy = function(t) {
+
+    t = normalizeTestObject(t);
+    var testFolder      = t.getNewTestFolder();
+    var testSubFolder   = ff$.combine(testFolder, "sub");
+
+    ff$.mkdir(testFolder);
+    ff$.mkdir(testSubFolder);
+    t.areEqual(0, ff$.dir(testSubFolder, "*.*").length);
+
+    var file1      = ff$.combine(testFolder, "file1.txt");
+    var file2      = ff$.combine(testFolder, "file2.txt");
+    t.createTextFile([file1, file2]);
+
+    var copiedFiles = ff$.copy(testFolder+"\\*.*", testSubFolder);
+
+    t.areEqual(2, ff$.dir(testSubFolder, "*.*").length);
+
+    ff$.delete(copiedFiles);
+    ff$.delete([file1, file2]);
+
+    t.areEqual(0, ff$.dir(testSubFolder, "*.*").length);
+    
+    ff$.rmdir(testSubFolder);
+    ff$.rmdir(testFolder);
+    t.done();
+}
+
+
+//"C:\Users\frederic.torres\AppData\Roaming\npm\nodeunit.cmd" "C:\Users\frederic.torres\Documents\GitHub\fCommandLine\fCommandline.Unittests.js"
+//C:\Users\frederic.torres\AppData\Roaming\npm\nodeunit.cmd" "C:\Users\frederic.torres\Documents\GitHub\fCommandLine\fCommandline.Unittests.js"
+
+
+
